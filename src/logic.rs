@@ -39,8 +39,64 @@ pub fn is_correct_guess(checked_guess: CheckedGuess) -> bool {
     checked_guess.fully_correct == 5
 }
 
-pub fn example() {
-    println!("Hello from logic file!");
+// calculate_entropy :: WordList -> Array GuessEntropy
+// calculate_entropy arr = Arr.fromFoldable $ calculate_entropy_ls arr
+
+// calculate_entropy_ls :: WordList -> List GuessEntropy
+// calculate_entropy_ls arr = entropy
+//   where
+//   entropy = map calc_entropy $ toUnfoldable agg_map
+
+//   calc_entropy (Tuple guess { sum, count }) = Tuple guess (log2 $ (sum / count))
+
+//   agg_map = agg probabilities empty
+
+//   probabilities = fromFoldable $ (map calc arr) <*> arr
+
+//   calc guess answer =
+//     let
+//       scored = score_guess guess answer
+
+//       options = toNumber $ length $ filter_words scored arr
+
+//       prob_inverse = total_options_length / options
+//     in
+//       { guess, prob_inverse }
+
+//   total_options_length = toNumber $ length arr
+
+// type AverageAccum
+//   = { sum :: Number, count :: Number }
+
+// agg :: List { guess :: Word, prob_inverse :: Number } -> Map Word AverageAccum -> Map Word AverageAccum
+// agg Nil m = m
+
+// agg (Cons { guess, prob_inverse } ls) m = agg ls $ update guess prob_inverse m
+//   where
+//   update g sum mp = insertWith merge g { sum, count: 1.0 } mp
+
+//   merge a b = { sum: a.sum + b.sum, count: a.count + b.count }
+
+fn filter_words<'a>(checked_guess: CheckedGuess, previous_words: WordList<'a>) -> WordList<'a> {
+    let CheckedGuess {
+        guess,
+        fully_correct,
+        partially_correct,
+    } = checked_guess;
+
+    let processed_guess = preprocess_guess(guess);
+
+    previous_words
+        .into_iter()
+        .filter(|w| match (fully_correct, partially_correct) {
+            (0, 0) => !w.chars().any(|c| guess.contains(c)),
+            _ => {
+                let s = score_guess_impl(&processed_guess, w);
+                s.fully_correct == fully_correct && s.partially_correct == partially_correct
+            }
+        })
+        .collect()
+}
 
 fn score_guess<'a>(guess: Word<'a>, answer: Word) -> CheckedGuess<'a> {
     let processed_guess = preprocess_guess(guess);
@@ -140,15 +196,15 @@ fn test_preprocess_answer() {
     });
 }
 
-fn score_guess_impl<'a>(guess: Guess<'a>, answer: Word) -> CheckedGuess<'a> {
-    let fully_correct_arr = check_word_exact(&guess, answer);
+fn score_guess_impl<'a>(guess: &Guess<'a>, answer: Word) -> CheckedGuess<'a> {
+    let fully_correct_arr = check_word_exact(guess, answer);
 
     let fully_correct = fully_correct_arr.iter().filter(|b| **b).count();
 
     let partially_correct = if fully_correct == 5 {
         0
     } else {
-        check_word_partial(&guess, answer, fully_correct_arr)
+        check_word_partial(guess, answer, fully_correct_arr)
             .iter()
             .filter(|b| **b)
             .count()
