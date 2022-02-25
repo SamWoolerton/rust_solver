@@ -3,8 +3,6 @@ mod utility;
 mod words;
 
 fn main() {
-    logic::example();
-
     let t = utility::timed(|| {
         let mut count_letters: usize = 0;
         for w in words::VALID_WORDS {
