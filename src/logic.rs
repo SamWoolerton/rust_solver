@@ -31,7 +31,7 @@ struct CharDetails {
     exact: bool,
 }
 
-type GuessEntropy<'a> = (Word<'a>, usize);
+type GuessEntropy<'a> = (Word<'a>, f64);
 
 type ScoreArr = [bool; 5];
 
@@ -39,43 +39,32 @@ pub fn is_correct_guess(checked_guess: CheckedGuess) -> bool {
     checked_guess.fully_correct == 5
 }
 
-// calculate_entropy :: WordList -> Array GuessEntropy
-// calculate_entropy arr = Arr.fromFoldable $ calculate_entropy_ls arr
+// runs in O(N^2) time as it requires evaluating every possible word as a guess against every possible word as an answer
+fn calculate_entropy<'a>(arr: WordList<'a>) -> Vec<GuessEntropy<'a>> {
+    let total_options = arr.len();
+    let agg_map: HashMap<Word, (usize, usize)> = HashMap::new();
 
-// calculate_entropy_ls :: WordList -> List GuessEntropy
-// calculate_entropy_ls arr = entropy
-//   where
-//   entropy = map calc_entropy $ toUnfoldable agg_map
+    for guess_word in arr {
+        let entry = agg_map.entry(&guess_word);
 
-//   calc_entropy (Tuple guess { sum, count }) = Tuple guess (log2 $ (sum / count))
+        for answer in arr {
+            let checked_guess = score_guess(guess_word, answer);
+            let options_count = filter_words(checked_guess, arr).len();
 
-//   agg_map = agg probabilities empty
+            entry
+                .and_modify(|(sum, count)| {
+                    *sum += options_count;
+                    *count += 1;
+                })
+                .or_insert((options_count, 1));
+        }
+    }
 
-//   probabilities = fromFoldable $ (map calc arr) <*> arr
-
-//   calc guess answer =
-//     let
-//       scored = score_guess guess answer
-
-//       options = toNumber $ length $ filter_words scored arr
-
-//       prob_inverse = total_options_length / options
-//     in
-//       { guess, prob_inverse }
-
-//   total_options_length = toNumber $ length arr
-
-// type AverageAccum
-//   = { sum :: Number, count :: Number }
-
-// agg :: List { guess :: Word, prob_inverse :: Number } -> Map Word AverageAccum -> Map Word AverageAccum
-// agg Nil m = m
-
-// agg (Cons { guess, prob_inverse } ls) m = agg ls $ update guess prob_inverse m
-//   where
-//   update g sum mp = insertWith merge g { sum, count: 1.0 } mp
-
-//   merge a b = { sum: a.sum + b.sum, count: a.count + b.count }
+    agg_map
+        .into_iter()
+        .map(|(guess, (sum, count))| (guess, ((sum as f64 / count as f64).log2())))
+        .collect()
+}
 
 fn filter_words<'a>(checked_guess: CheckedGuess, previous_words: WordList<'a>) -> WordList<'a> {
     let CheckedGuess {
