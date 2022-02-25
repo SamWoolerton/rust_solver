@@ -25,71 +25,54 @@ struct Answer<'a> {
     char_counts: Lookup,
 }
 
-struct CharDetails {
-    char: char,
-    index: usize,
-    exact: bool,
-}
-
 type GuessEntropy<'a> = (Word<'a>, f64);
 
 type ScoreArr = [bool; 5];
 
-pub fn is_correct_guess(checked_guess: CheckedGuess) -> bool {
-    checked_guess.fully_correct == 5
-}
-
 // runs in O(N^2) time as it requires evaluating every possible word as a guess against every possible word as an answer
-fn calculate_entropy<'a>(arr: WordList<'a>) -> Vec<GuessEntropy<'a>> {
+pub fn calculate_entropy<'a>(arr: WordList<'a>) -> Vec<GuessEntropy<'a>> {
     let total_options = arr.len();
-    let agg_map: HashMap<Word, (usize, usize)> = HashMap::new();
+    let mut agg_map: HashMap<Word, (f64, usize)> = HashMap::new();
 
-    for guess_word in arr {
-        let entry = agg_map.entry(&guess_word);
-
-        for answer in arr {
+    for guess_word in &arr {
+        for answer in &arr {
             let checked_guess = score_guess(guess_word, answer);
-            let options_count = filter_words(checked_guess, arr).len();
+            let score = (filter_words(checked_guess, &arr) as f64) / (total_options as f64);
 
-            entry
+            agg_map
+                .entry(&guess_word)
                 .and_modify(|(sum, count)| {
-                    *sum += options_count;
+                    *sum += score;
                     *count += 1;
                 })
-                .or_insert((options_count, 1));
+                .or_insert((score, 1));
         }
     }
 
     agg_map
         .into_iter()
-        .map(|(guess, (sum, count))| (guess, ((sum as f64 / count as f64).log2())))
+        .map(|(guess, (sum, count))| (guess, ((sum / count as f64).log2())))
         .collect()
 }
 
-fn filter_words<'a>(checked_guess: CheckedGuess, previous_words: WordList<'a>) -> WordList<'a> {
-    let CheckedGuess {
-        guess,
-        fully_correct,
-        partially_correct,
-    } = checked_guess;
-
-    let processed_guess = preprocess_guess(guess);
+fn filter_words<'a>(g: CheckedGuess, previous_words: &WordList<'a>) -> usize {
+    let processed_guess = preprocess_guess(g.guess);
 
     previous_words
-        .into_iter()
-        .filter(|w| match (fully_correct, partially_correct) {
-            (0, 0) => !w.chars().any(|c| guess.contains(c)),
+        .iter()
+        .filter(|w| match (g.fully_correct, g.partially_correct) {
+            (0, 0) => !w.chars().any(|c| g.guess.contains(c)),
             _ => {
                 let s = score_guess_impl(&processed_guess, w);
-                s.fully_correct == fully_correct && s.partially_correct == partially_correct
+                s.fully_correct == g.fully_correct && s.partially_correct == g.partially_correct
             }
         })
-        .collect()
+        .count()
 }
 
 fn score_guess<'a>(guess: Word<'a>, answer: Word) -> CheckedGuess<'a> {
     let processed_guess = preprocess_guess(guess);
-    score_guess_impl(processed_guess, answer)
+    score_guess_impl(&processed_guess, answer)
 }
 
 #[test]
