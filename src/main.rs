@@ -18,15 +18,16 @@ fn test(n: usize) {
 
 /*
 
-Using the first 10, took 8.8354ms
-Using the first 20, took 62.938ms
-Using the first 30, took 178.061ms
-Using the first 40, took 402.1568ms
-Using the first 50, took 845.5908ms
-Using the first 60, took 1.5198183s
-Using the first 70, took 2.3878333s
-Using the first 80, took 3.3459977s
-Using the first 90, took 4.7401197s
-Using the first 100, took 7.0207514s
+--release
+Using the first 10, took 3.2559ms
+Using the first 20, took 5.5726ms
+Using the first 30, took 10.4458ms
+Using the first 40, took 15.5882ms
+Using the first 50, took 126.9262ms
+Using the first 60, took 39.6478ms
+Using the first 70, took 60.9412ms
+Using the first 80, took 83.1429ms
+Using the first 90, took 117.1565ms
+Using the first 100, took 244.5292ms
 
 */
